@@ -1,0 +1,120 @@
+import { Request, Response } from 'express';
+import { ProductService } from '../service/product.service';
+
+const service = new ProductService();
+
+export class ProductController {
+
+  async getAll(req: Request, res: Response): Promise<void> {
+    const page  = parseInt(req.query.page  as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = (req.query.search as string) || '';
+
+    if (page <= 0) {
+      res.status(400).json({
+        code: "INVALID_QUERY_PARAMS",
+        message: "Parámetros de búsqueda incorrectos.",
+        details: { page: "El valor de la página debe ser un número entero mayor a 0." }
+      });
+      return;
+    }
+
+    let products = await service.getAllProducts();
+
+    if (search) {
+      products = products.filter(p =>
+        p.name.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    const total      = products.length;
+    const totalPages = Math.ceil(total / limit);         
+    const start      = (page - 1) * limit;             
+    const paginated  = products.slice(start, start + limit); 
+
+    res.status(200).json({
+      data: paginated,
+      meta: { page, limit, total, totalPages }
+    });
+  }
+
+  async getById(req: Request, res: Response): Promise<void> {
+    const id = parseInt(req.params.id); 
+    const product = await service.getProductById(id);
+
+    if (!product) {
+      res.status(404).json({
+        code: "PRODUCT_NOT_FOUND",
+        message: "El producto no existe.",
+        details: { id: "No se encontró ningún artículo con el identificador proporcionado." }
+      });
+      return;
+    }
+
+    res.status(200).json(product);
+  }
+
+  async create(req: Request, res: Response): Promise<void> {
+    const { name, price, inStock } = req.body; 
+
+    if (!price || price <= 0) {
+      res.status(422).json({
+        code: "INVALID_PRICE_VALUE",
+        message: "El precio debe ser mayor a 0.",
+        details: { price: "El valor económico asignado al artículo no puede ser cero o negativo." }
+      });
+      return;
+    }
+
+    const product = await service.createProduct({ name, price, inStock });
+    res.status(201).json(product);
+  }
+
+  async update(req: Request, res: Response): Promise<void> {
+    const id = parseInt(req.params.id);
+    const { name, price, inStock } = req.body;
+
+    const product = await service.updateProduct(id, { name, price, inStock });
+    if (!product) {
+      res.status(404).json({
+        code: "PRODUCT_NOT_FOUND",
+        message: "El producto no existe.",
+        details: { id: "No se encontró ningún artículo con el identificador proporcionado." }
+      });
+      return;
+    }
+
+    res.status(200).json(product);
+  }
+
+  async patch(req: Request, res: Response): Promise<void> {
+    const id = parseInt(req.params.id);
+
+    const product = await service.patchProduct(id, req.body);
+    if (!product) {
+      res.status(404).json({
+        code: "PRODUCT_NOT_FOUND",
+        message: "El producto no existe.",
+        details: { id: "No se encontró ningún artículo con el identificador proporcionado." }
+      });
+      return;
+    }
+
+    res.status(200).json(product);
+  }
+
+  async delete(req: Request, res: Response): Promise<void> {
+    const id = parseInt(req.params.id);
+    const deleted = await service.deleteProduct(id);
+
+    if (!deleted) {
+      res.status(404).json({
+        code: "PRODUCT_NOT_FOUND",
+        message: "El producto no existe.",
+        details: { id: "No se encontró ningún artículo con el identificador proporcionado." }
+      });
+      return;
+    }
+    res.status(204).send();
+  }
+}

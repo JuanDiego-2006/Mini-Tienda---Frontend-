@@ -1,0 +1,326 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "AWOS — Shipping API",
+    "description": "Gestión de envíos para la papelería AWOS. Permite crear, consultar, actualizar el estado y eliminar guías de envío asociadas a pedidos existentes.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "UPChiapas — AWOS"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001/api/v1",
+      "description": "Servidor local de desarrollo"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Shipping",
+      "description": "Operaciones sobre envíos"
+    }
+  ],
+  "paths": {
+    "/shipping": {
+      "get": {
+        "tags": ["Shipping"],
+        "summary": "Listar todos los envíos",
+        "operationId": "getAllShipments",
+        "responses": {
+          "200": {
+            "description": "Lista de envíos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Shipping" }
+                },
+                "example": [
+                  {
+                    "id": 1,
+                    "orderId": 501,
+                    "productId": 1,
+                    "productName": "Cuaderno Profesional Raya",
+                    "userName": "Juan Diego Ramos",
+                    "direccion": "Calle Reforma #45, Col. Centro",
+                    "telefono": "9612345678",
+                    "referencia": "Casa blanca con portón negro",
+                    "empresa": "DHL",
+                    "guia": "DHL-2026-00123",
+                    "fechaEstimada": "",
+                    "status": "En camino"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Shipping"],
+        "summary": "Crear un nuevo envío",
+        "operationId": "createShipment",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ShippingInput" },
+              "example": {
+                "orderId": 501,
+                "productId": 1,
+                "productName": "Cuaderno Profesional Raya",
+                "userName": "María López",
+                "direccion": "Av. Central #10, Col. Norte",
+                "telefono": "9611234567",
+                "referencia": "Frente al parque",
+                "empresa": "DHL",
+                "guia": "DHL-2026-00999",
+                "status": "pendiente"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Envío creado exitosamente",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Shipping" }
+              }
+            }
+          },
+          "422": {
+            "description": "Campos obligatorios faltantes o orderId inválido",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "examples": {
+                  "camposFaltantes": {
+                    "summary": "Faltan campos obligatorios",
+                    "value": {
+                      "code": "MISSING_FIELDS",
+                      "message": "Faltan campos obligatorios.",
+                      "details": {
+                        "fields": "orderId, userName, direccion, telefono, empresa y guia son requeridos."
+                      }
+                    }
+                  },
+                  "orderIdInvalido": {
+                    "summary": "orderId negativo o cero",
+                    "value": {
+                      "code": "INVALID_ORDER_ID",
+                      "message": "El ID de pedido no es válido.",
+                      "details": {
+                        "orderId": "El orderId debe ser un número entero mayor a 0."
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shipping/{id}": {
+      "get": {
+        "tags": ["Shipping"],
+        "summary": "Obtener un envío por ID",
+        "operationId": "getShipmentById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "example": 1 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Envío encontrado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Shipping" }
+              }
+            }
+          },
+          "404": {
+            "description": "Envío no encontrado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "code": "SHIPPING_NOT_GENERATED",
+                  "message": "El pedido aún no se ha enviado.",
+                  "details": {
+                    "id": "No se ha generado guía de envío para este pedido."
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Shipping"],
+        "summary": "Eliminar un envío",
+        "operationId": "deleteShipment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "example": 1 }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Envío eliminado — sin contenido"
+          },
+          "404": {
+            "description": "Envío no encontrado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "code": "SHIPPING_NOT_GENERATED",
+                  "message": "No se encontró el envío.",
+                  "details": {
+                    "id": "No existe un envío con ese identificador."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shipping/{id}/status": {
+      "patch": {
+        "tags": ["Shipping"],
+        "summary": "Actualizar el estado de un envío",
+        "operationId": "updateShipmentStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "example": 1 }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["status"],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["pendiente", "En camino", "Entregado"],
+                    "example": "En camino"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Estado actualizado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Shipping" }
+              }
+            }
+          },
+          "404": {
+            "description": "Envío no encontrado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "code": "SHIPPING_NOT_GENERATED",
+                  "message": "No se encontró el envío.",
+                  "details": { "id": "No existe un envío con ese identificador." }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Estado fuera del catálogo permitido",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "code": "INVALID_SHIPPING_STATUS",
+                  "message": "El estado de envío no es válido.",
+                  "details": {
+                    "status": "Los estados permitidos son: pendiente, En camino, Entregado."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Shipping": {
+        "type": "object",
+        "properties": {
+          "id":           { "type": "integer",  "example": 1 },
+          "orderId":      { "type": "integer",  "example": 501 },
+          "productId":    { "type": "integer",  "example": 1 },
+          "productName":  { "type": "string",   "example": "Cuaderno Profesional Raya" },
+          "userName":     { "type": "string",   "example": "Juan Diego Ramos" },
+          "direccion":    { "type": "string",   "example": "Calle Reforma #45, Col. Centro" },
+          "telefono":     { "type": "string",   "example": "9612345678" },
+          "referencia":   { "type": "string",   "example": "Casa blanca con portón negro" },
+          "empresa":      { "type": "string",   "example": "DHL" },
+          "guia":         { "type": "string",   "example": "DHL-2026-00123" },
+          "fechaEstimada":{ "type": "string",   "example": "" },
+          "status": {
+            "type": "string",
+            "enum": ["pendiente", "En camino", "Entregado"],
+            "example": "pendiente"
+          }
+        }
+      },
+      "ShippingInput": {
+        "type": "object",
+        "required": ["orderId", "userName", "direccion", "telefono", "empresa", "guia"],
+        "properties": {
+          "orderId":     { "type": "integer", "minimum": 1, "example": 501 },
+          "productId":   { "type": "integer", "example": 1 },
+          "productName": { "type": "string",  "example": "Cuaderno Profesional Raya" },
+          "userName":    { "type": "string",  "example": "María López" },
+          "direccion":   { "type": "string",  "example": "Av. Central #10, Col. Norte" },
+          "telefono":    { "type": "string",  "example": "9611234567" },
+          "referencia":  { "type": "string",  "example": "Frente al parque" },
+          "empresa":     { "type": "string",  "example": "DHL" },
+          "guia":        { "type": "string",  "example": "DHL-2026-00999" },
+          "status": {
+            "type": "string",
+            "enum": ["pendiente", "En camino", "Entregado"],
+            "default": "pendiente"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "code":    { "type": "string", "example": "MISSING_FIELDS" },
+          "message": { "type": "string", "example": "Faltan campos obligatorios." },
+          "details": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}
